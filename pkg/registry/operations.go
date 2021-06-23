@@ -14,13 +14,8 @@ import (
 
 // v2PushManifest pushes the data to repo with the given tag and media type, returning the digest and size
 // of pushed content.
-func (p Proxy) v2PushManifest(repo, tag, mediaType string, manifest v1.Manifest) (v1.Descriptor, error) {
+func (p Proxy) v2PushManifest(repo, tag, mediaType string, manifestBytes []byte) (v1.Descriptor, error) {
 	manifestURL := p.url(p.LoginServer, fmt.Sprintf(routeManifest, repo, tag))
-
-	manifestBytes, err := json.Marshal(manifest)
-	if err != nil {
-		return v1.Descriptor{}, err
-	}
 
 	regReq := registryRequest{
 		method:      http.MethodPut,
@@ -29,7 +24,7 @@ func (p Proxy) v2PushManifest(repo, tag, mediaType string, manifest v1.Manifest)
 		contentType: mediaType,
 	}
 
-	_, err = p.do(regReq, http.StatusCreated, bearerAuth)
+	_, err := p.do(regReq, http.StatusCreated, bearerAuth)
 	if err != nil {
 		return v1.Descriptor{}, err
 	}

@@ -18,18 +18,16 @@ const (
 
 // Artifacts related constants
 const (
-	author = "ACR Check Health"
-
-	testMediaType = "application/acr.checkhealth.test"
-
-	layer = "Test layer authored by " + author
-
-	repoPrefix = "acrcheckhealth"
+	checkHealthAuthor       = "ACR Check Health"
+	checkHealthMediaType    = "application/acr.checkhealth.test"
+	checkHealthArtifactType = "application/acr.checkhealth.artifact.test"
+	checkHealthLayerFmt     = "Test layer authored by " + checkHealthAuthor + " at %s" // add time
+	checkHealthRepoPrefix   = "acrcheckhealth"
 )
 
 // OCI related data
 var (
 	ociConfig = v1.Image{
-		Author: author,
+		Author: checkHealthAuthor,
 	}
 )

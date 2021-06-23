@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/aviral26/acr-checkhealth/pkg/io"
+	v2specs "github.com/opencontainers/artifacts/specs-go"
+	v2 "github.com/opencontainers/artifacts/specs-go/v2"
 	"github.com/opencontainers/image-spec/specs-go"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
@@ -14,13 +16,62 @@ import (
 // verifyReferrers pushes an OCI image and an associated referrer artifact.
 // It then verifies that both objects are pullable.
 func (p Proxy) verifyReferrers() error {
+	var (
+		repo        = fmt.Sprintf("%v%v", checkHealthRepoPrefix, time.Now().Unix())
+		imageTag    = fmt.Sprintf("%v", time.Now().Unix())
+		artifactTag = fmt.Sprintf("%v-art-%v", imageTag, time.Now().Unix())
+	)
+
+	// Push simple image
+	imageDesc, err := p.pushImage(repo, imageTag)
+	if err != nil {
+		return err
+	}
+
+	// Push artifact layer
+	layerDesc, err := p.v2PushBlob(repo, io.NewReader(strings.NewReader(fmt.Sprintf(checkHealthLayerFmt, time.Now()))))
+	if err != nil {
+		return err
+	}
+
+	artifact := v2.Artifact{
+		Versioned: v2specs.Versioned{SchemaVersion: 3},
+		Blobs: []v2.Descriptor{
+			{
+				MediaType: layerDesc.MediaType,
+				Digest:    layerDesc.Digest,
+				Size:      layerDesc.Size,
+			},
+		},
+		MediaType:    v2.MediaTypeArtifactManifest,
+		ArtifactType: checkHealthArtifactType,
+		SubjectManifest: v2.Descriptor{
+			MediaType: imageDesc.MediaType,
+			Digest:    imageDesc.Digest,
+			Size:      imageDesc.Size,
+		},
+	}
+
+	artifactBytes, err := json.Marshal(artifact)
+	if err != nil {
+		return err
+	}
+
+	p.Logger.Info().Msg(fmt.Sprintf("push OCI artifact %v:%v", repo, artifactTag))
+
+	// Push artifact
+	_, err = p.v2PushManifest(repo, artifactTag, artifact.MediaType, artifactBytes)
+	if err != nil {
+		return err
+	}
+
 	return fmt.Errorf("verifyReferrers: not implemented")
 }
 
 // verifySimple pushes a small OCI image to the registry and pulls it.
 func (p Proxy) verifySimple() error {
 	var (
-		repo = fmt.Sprintf("%v%v", repoPrefix, time.Now().Unix())
+		repo = fmt.Sprintf("%v%v", checkHealthRepoPrefix, time.Now().Unix())
 		tag  = fmt.Sprintf("%v", time.Now().Unix())
 	)
 
@@ -77,7 +128,7 @@ func (p Proxy) pushImage(repo, tag string) (v1.Descriptor, error) {
 	}
 
 	// Upload a layer
-	layerDesc, err := p.v2PushBlob(repo, io.NewReader(strings.NewReader(layer)))
+	layerDesc, err := p.v2PushBlob(repo, io.NewReader(strings.NewReader(fmt.Sprintf(checkHealthLayerFmt, time.Now()))))
 	if err != nil {
 		return v1.Descriptor{}, err
 	}
@@ -85,19 +136,24 @@ func (p Proxy) pushImage(repo, tag string) (v1.Descriptor, error) {
 	ociManifest := v1.Manifest{
 		Versioned: specs.Versioned{SchemaVersion: 2},
 		Config: v1.Descriptor{
-			MediaType: testMediaType,
+			MediaType: checkHealthMediaType,
 			Digest:    configDesc.Digest,
 			Size:      configDesc.Size,
 		},
 		Layers: []v1.Descriptor{
 			{
-				MediaType: testMediaType,
+				MediaType: checkHealthMediaType,
 				Digest:    layerDesc.Digest,
 				Size:      layerDesc.Size,
 			},
 		},
 	}
 
+	manifestBytes, err := json.Marshal(ociManifest)
+	if err != nil {
+		return v1.Descriptor{}, err
+	}
+
 	// Push manifest
-	return p.v2PushManifest(repo, tag, v1.MediaTypeImageManifest, ociManifest)
+	return p.v2PushManifest(repo, tag, v1.MediaTypeImageManifest, manifestBytes)
 }

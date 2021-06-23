@@ -79,6 +79,7 @@ func (r RoundTripperWithContext) RoundTrip(req *http.Request) (RoundTripInfo, er
 			original := info.Response.Body
 			info.Response.Body = json.RawMessage(fmt.Sprintf("{\"pretty\": \"%s\"}", url.PathEscape(string(original))))
 			bytes, err = json.MarshalIndent(info, "", "   ")
+			info.Response.Body = original
 		}
 
 		if err != nil {
