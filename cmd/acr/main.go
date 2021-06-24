@@ -22,7 +22,10 @@ func main() {
 			},
 		},
 		Flags: []cli.Flag{
-			traceFlag,
+			&cli.BoolFlag{
+				Name:  traceStr,
+				Usage: "print trace logs with secrets",
+			},
 		},
 		Commands: []*cli.Command{
 			pingCommand,

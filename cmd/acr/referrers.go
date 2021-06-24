@@ -6,13 +6,8 @@ var referrersCommand = &cli.Command{
 	Name:      "check-referrers",
 	Usage:     "check referrers data path (push, pull) based on https://github.com/opencontainers/artifacts/pull/29",
 	ArgsUsage: "<login-server>",
-	Flags: []cli.Flag{
-		usernameFlag,
-		passwordFlag,
-		dataEndpointFlag,
-		insecureFlag,
-	},
-	Action: runCheckReferrers,
+	Flags:     commonFlags,
+	Action:    runCheckReferrers,
 }
 
 func runCheckReferrers(ctx *cli.Context) (err error) {
